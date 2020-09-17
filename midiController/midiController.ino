@@ -4,7 +4,7 @@
 // -------------------------------------------
 // FUNCTION					CC#		VALUE
 // -------------------------------------------
-#define MIDI_BANK_SELECT 	0		// 0-1
+#define MIDI_BANK_SELECT 	0		// 0-1		NOT available (tested)
 #define FXA 			 	10		// 0-127	*	(Comp or Wah)
 #define OD_DS			 	11		// 0-127	**
 #define AMP				 	12		// 0-127
@@ -16,6 +16,7 @@
 #define FXB				 	18		// 0-127	** (Chorus or Vol Boost)
 #define DELAY			 	19		// 0-127	**
 #define REVERB			 	20		// 0-127	*
+#define TUNER				43		// 0-127
 // -------------------------------------------
 
 // ## MIDI Controller Switch Settings
@@ -61,7 +62,7 @@ void setup() {
 	pinMode(FS_2, INPUT_PULLUP);
 	pinMode(FS_3, INPUT_PULLUP);
 
-	MIDI.begin(MIDI_CHANNEL_OMNI); // Listen to all incoming messages
+	MIDI.begin(MIDI_CHANNEL_OMNI); // Channel MUST be 'OMNI' (tested)
 }
 
 void loop() {
