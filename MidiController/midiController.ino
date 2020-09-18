@@ -1,4 +1,5 @@
 #include <MIDI.h>
+#include <ezButton.h> // need to install
 
 // ## GE250 MIDI IN CC REFERENCE ##
 // -------------------------------------------
