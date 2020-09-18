@@ -16,7 +16,7 @@
 #define FXB				 	18		// 0-127	** (Chorus or Vol Boost)
 #define DELAY			 	19		// 0-127	**
 #define REVERB			 	20		// 0-127	*
-#define TUNER				43		// 0-127
+#define TUNER				43		// 0-127	*
 // -------------------------------------------
 
 // ## MIDI Controller Switch Settings
