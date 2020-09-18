@@ -57,16 +57,52 @@ static bool editMode	  = LOW;	// edit switch mode (normal ON or OFF mode by each
    MIDI_NAMESPACE::MidiInterface<Transport> MIDI((Transport&)serialMIDI);
 #endif
 
+   ezButton btnFSM(FS_M);
+   ezButton btnFS1(FS_1);
+   ezButton btnFS2(FS_2);
+   ezButton btnFS3(FS_3);
+
 void setup() {
-	pinMode(FS_M, INPUT_PULLUP);
-	pinMode(FS_1, INPUT_PULLUP);
-	pinMode(FS_2, INPUT_PULLUP);
-	pinMode(FS_3, INPUT_PULLUP);
+	btnFSM.setDebounceTime(50);
+	btnFS1.setDebounceTime(50);
+	btnFS2.setDebounceTime(50);
+	btnFS3.setDebounceTime(50);
 
 	MIDI.begin(MIDI_CHANNEL_OMNI); // Channel MUST be 'OMNI' (tested)
 }
 
 void loop() {
+	// BUTTON SETUP
+	btnFSM.loop();
+	btnFS1.loop();
+	btnFS2.loop();
+	btnFS3.loop();
+
+	if (btnFSM.isPressed()) {
+		pressedTime = millis();
+		isPressing = true;
+		isLongDetected = false;
+	}
+
+	if (btnFSM.isReleased()) {
+		releasedTime = millis();
+		isPressing = false;
+
+		long pressDuration = releasedTime - pressedTime;
+
+		if (pressDuration < SHORT_PRESS_TIME)
+			Serial.println('A short press is detected!');
+	}
+
+	if (isPressing == true && isLongDetected == false) {
+	    long pressDuration = millis() - pressedTime;
+
+	    if( pressDuration > LONG_PRESS_TIME ) {
+	      Serial.println("A long press is detected");
+	      isLongDetected = true;
+	    }
+	}
+
 	// BUTTON MODE SELECTOR
 	bool stateFSM = digitalRead(FS_M);
 	if (stateFSM != mStateFSM) {
