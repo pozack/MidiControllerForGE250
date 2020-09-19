@@ -3,21 +3,21 @@
 
 // ## GE250 MIDI IN CC REFERENCE ##
 // -------------------------------------------
-// FUNCTION					CC#		VALUE
+// FUNCTION               CC#     VALUE
 // -------------------------------------------
-#define MIDI_BANK_SELECT  0		  // 0-1		NOT available
-#define FXA 			 	      10		// 0-127	*	(Comp or Wah)
-#define OD_DS			 	      11		// 0-127	**
-#define AMP				 	      12		// 0-127
-#define TONE_CAPTURE	 	  13		// 0-127
-#define CAB				 	      14		// 0-127
-#define NS				 	      15		// 0-127
-#define EQ				 	      16		// 0-127	*	(EQ or Vol Boost)
-#define FX_LOOP			 	    17		// 0-127
-#define FXB				 	      18		// 0-127	** (Chorus or Vol Boost)
-#define DELAY			 	      19		// 0-127	**
-#define REVERB			 	    20		// 0-127	*
-#define TUNER				      22		// 0-127	*
+#define MIDI_BANK_SELECT  0     // 0-1    NOT available
+#define FXA               10		// 0-127  *	(Comp or Wah)
+#define OD_DS             11    // 0-127  **
+#define AMP               12    // 0-127
+#define TONE_CAPTURE      13    // 0-127
+#define CAB               14    // 0-127
+#define NS                15    // 0-127
+#define EQ                16    // 0-127  *	(EQ or Vol Boost)
+#define FX_LOOP           17    // 0-127
+#define FXB               18    // 0-127  ** (Chorus or Vol Boost)
+#define DELAY             19    // 0-127  **
+#define REVERB            20    // 0-127  *
+#define TUNER             22    // 0-127  *
 // -------------------------------------------
 
 // ## MIDI Controller Switch Settings
