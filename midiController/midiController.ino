@@ -6,7 +6,7 @@
 // FUNCTION               CC#     VALUE
 // -------------------------------------------
 #define MIDI_BANK_SELECT  0     // 0-1    NOT available
-#define FXA               10		// 0-127  *	(Comp or Wah)
+#define FXA               10    // 0-127  * (Comp or Wah)
 #define OD_DS             11    // 0-127  **
 #define AMP               12    // 0-127
 #define TONE_CAPTURE      13    // 0-127
