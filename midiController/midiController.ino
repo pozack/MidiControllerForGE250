@@ -66,7 +66,7 @@ void setup() {
   btnFS2.setDebounceTime(50);
   btnFS3.setDebounceTime(50);
   
-	MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
+  MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
 }
 
 void loop() {
