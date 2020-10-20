@@ -1,49 +1,30 @@
 #include <MIDI.h>
-#include <ezButton.h> // need to install
+#include <ezButton.h>
 
 // ## GE250 MIDI IN CC REFERENCE ##
 // -------------------------------------------
-// FUNCTION					CC#		VALUE
+// FUNCTION               CC#     VALUE
 // -------------------------------------------
-#define MIDI_BANK_SELECT 	0		// 0-1		NOT available (tested)
-#define FXA 			 	10		// 0-127	*	(Comp or Wah)
-#define OD_DS			 	11		// 0-127	**
-#define AMP				 	12		// 0-127
-#define TONE_CAPTURE	 	13		// 0-127
-#define CAB				 	14		// 0-127
-#define NS				 	15		// 0-127
-#define EQ				 	16		// 0-127	*	(EQ or Vol Boost)
-#define FX_LOOP			 	17		// 0-127
-#define FXB				 	18		// 0-127	** (Chorus or Vol Boost)
-#define DELAY			 	19		// 0-127	**
-#define REVERB			 	20		// 0-127	*
-#define TUNER				43		// 0-127	*
+#define MIDI_BANK_SELECT  0     // 0-1    NOT available
+#define FXA               10    // 0-127  * (Comp or Wah)
+#define OD_DS             11    // 0-127  **
+#define AMP               12    // 0-127
+#define TONE_CAPTURE      13    // 0-127
+#define CAB               14    // 0-127
+#define NS                15    // 0-127
+#define EQ                16    // 0-127  *	(EQ or Vol Boost)
+#define FX_LOOP           17    // 0-127
+#define FXB               18    // 0-127  ** (Chorus or Vol Boost)
+#define DELAY             19    // 0-127  **
+#define REVERB            20    // 0-127  *
+#define TUNER             22    // 0-127  *
 // -------------------------------------------
 
 // ## MIDI Controller Switch Settings
-#define FS_M 2	// Mode Selector Switch (Mode1, Mode2)
-#define FS_1 3	// OD/DS (Mode1), EQ (Mode2) On/Off Switch
-#define FS_2 4	// FXB (Mode1), FXA (Mode2) On/Off Switch
-#define FS_3 5	// Delay (Mode1), Reverb (Mode2) On/Off Switch
-
-static const uint8_t
-	debounceTime = 200;	// unit (ms)
-
-static uint8_t mPrevDebounceTimeM = 0;
-static bool mStateFSM	  = HIGH;
-static bool mStateFSMPrev = HIGH;
-static uint8_t mPrevDebounceTime1 = 0;
-static bool mStateFS1	  = HIGH;
-static bool mStateFS1Prev = HIGH;
-static uint8_t mPrevDebounceTime2 = 0;
-static bool mStateFS2	  = HIGH;
-static bool mStateFS2Prev = HIGH;
-static uint8_t mPrevDebounceTime3 = 0;
-static bool mStateFS3	  = HIGH;
-static bool mStateFS3Prev = HIGH;
-
-static bool controlMode	  = HIGH;	// HIGH : Mode1, LOW : Mode2
-static bool editMode	  = LOW;	// edit switch mode (normal ON or OFF mode by each switch)
+#define FS_1 3	// OD/DS (Mode1), EQ (Mode2) on/off switch + mode selector by long press
+#define FS_2 4	// FXB (Mode1), FXA (Mode2) on/off switch
+#define FS_3 5	// Delay (Mode1), Reverb (Mode2) on/off switch + tuner by long press
+#define LED_MODE	// mode selector LED (OFF : Mode1, ON : Mode2)
 
 #if defined(ARDUINO_SAM_DUE) || defined(SAMD_SERIES)
    MIDI_CREATE_DEFAULT_INSTANCE();
@@ -57,149 +38,135 @@ static bool editMode	  = LOW;	// edit switch mode (normal ON or OFF mode by each
    MIDI_NAMESPACE::MidiInterface<Transport> MIDI((Transport&)serialMIDI);
 #endif
 
-   ezButton btnFSM(FS_M);
-   ezButton btnFS1(FS_1);
-   ezButton btnFS2(FS_2);
-   ezButton btnFS3(FS_3);
+ezButton btnFS1(FS_1);
+ezButton btnFS2(FS_2);
+ezButton btnFS3(FS_3);
+
+const int SHORT_PRESS_TIME = 500;
+const int LONG_PRESS_TIME = 500;
+
+// setting parameters for mode selector
+unsigned long pressedTime   = 0;
+unsigned long releasedTime  = 0;
+bool isPressing     = false;
+bool isLongDetected = false;
+bool controlMode    = true;    // true : Mode1, false : Mode2
+bool tunerMode      = false;   // tuner on by long press
+
+// setting default state of FS 1~3
+bool mPrevStateFS1    = false;
+bool mPrevStateFS2    = false;
+bool mPrevStateFS3    = false;
 
 void setup() {
-	btnFSM.setDebounceTime(50);
-	btnFS1.setDebounceTime(50);
-	btnFS2.setDebounceTime(50);
-	btnFS3.setDebounceTime(50);
-
-	MIDI.begin(MIDI_CHANNEL_OMNI); // Channel MUST be 'OMNI' (tested)
+  Serial.begin(9600);
+  btnFS1.setDebounceTime(50);
+  btnFS2.setDebounceTime(50);
+  btnFS3.setDebounceTime(50);
+  
+  MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
 }
 
 void loop() {
-	// BUTTON SETUP
-	btnFSM.loop();
-	btnFS1.loop();
-	btnFS2.loop();
-	btnFS3.loop();
 
-	if (btnFSM.isPressed()) {
-		pressedTime = millis();
-		isPressing = true;
-		isLongDetected = false;
-	}
+  btnFS1.loop();
+  btnFS2.loop();
+  btnFS3.loop();
 
-	if (btnFSM.isReleased()) {
-		releasedTime = millis();
-		isPressing = false;
+  // ### 1. BUTTON FS-1 / MODE SELECTOR ###
+  if (btnFS1.isPressed()) {
+    pressedTime = millis();
+    isPressing = true;
+    isLongDetected = false;
+  }
 
-		long pressDuration = releasedTime - pressedTime;
+  if (btnFS1.isReleased()) {
+    releasedTime = millis();
+    isPressing = false;
 
-		if (pressDuration < SHORT_PRESS_TIME)
-			Serial.println('A short press is detected!');
-	}
+    long pressDuration = releasedTime - pressedTime;
 
-	if (isPressing == true && isLongDetected == false) {
-	    long pressDuration = millis() - pressedTime;
+    if (pressDuration < SHORT_PRESS_TIME) {
+      // OD/DS (Mode1), EQ (Mode2) on/off switch
+      Serial.println("FS1 short press is detected!");
 
-	    if( pressDuration > LONG_PRESS_TIME ) {
-	      Serial.println("A long press is detected");
-	      isLongDetected = true;
-	    }
-	}
+      tunerMode = false;
 
-	// BUTTON MODE SELECTOR
-	bool stateFSM = digitalRead(FS_M);
-	if (stateFSM != mStateFSM) {
-		if (millis() - mPrevDebounceTimeM > debounceTime) {
-			mStateFSM = stateFSM;
-			if (mStateFSM == LOW) {
-				// FS_M OFF to ON
-				controlMode = HIGH;
-			} else {
-				// FS_M ON to OFF
-				controlMode = LOW;
-			}
-		}
-	}
-	if (stateFSM != mStateFSMPrev) {
-		mPrevDebounceTimeM = millis();
-		mStateFSMPrev = stateFSM;
-	}
+      if (controlMode == true)
+        controlMode = false;  // Switch Mode1 to Mode2
+        // FS_M LED change red
+      else
+        controlMode = true;   // Switch Mode2 to Mode1
+        // FS_M LED change green
+    }
+  }
 
-	// BUTTON SW1
-	bool stateFS1 = digitalRead(FS_1);
-	if (stateFS1 != mStateFS1) {
-		if (millis() - mPrevDebounceTime1 > debounceTime) {
-			mStateFS1 = stateFS1;
-			if (mStateFS1 == LOW) {
-				// FS1 OFF to ON
-				if (controlMode == HIGH) {
-					MIDI.sendControlChange(OD_DS, 127, 1);
-				} else {
-					MIDI.sendControlChange(EQ, 127, 1);
-				}
-			} else {
-				// FS1 ON to OFF
-				if (controlMode == HIGH) {
-					MIDI.sendControlChange(OD_DS, 0, 1);
-				} else {
-					MIDI.sendControlChange(EQ, 0, 1);
-				}
-			}
-		}
-	}
-	if (stateFS1 != mStateFS1Prev) {
-		mPrevDebounceTime1 = millis();
-		mStateFS1Prev = stateFS1;
-	}
+  if (isPressing == true && isLongDetected == false) {
+    long pressDuration = millis() - pressedTime;
 
-	// BUTTON SW2
-	bool stateFS2 = digitalRead(FS_2);
-	if (stateFS2 != mStateFS2) {
-		if (millis() - mPrevDebounceTime2 > debounceTime) {
-			mStateFS2 = stateFS2;
-			if (mStateFS2 == LOW) {
-				// FS2 OFF to ON
-				if (controlMode == HIGH) {
-					MIDI.sendControlChange(FXB, 127, 1);
-				} else {
-					MIDI.sendControlChange(FXA, 127, 1);
-				}
-			} else {
-				// FS2 ON to OFF
-				if (controlMode == HIGH) {
-					MIDI.sendControlChange(FXB, 0, 1);
-				} else {
-					MIDI.sendControlChange(FXA, 0, 1);
-				}
-			}
-		}
-	}
-	if (stateFS2 != mStateFS2Prev) {
-		mPrevDebounceTime2 = millis();
-		mStateFS2Prev = stateFS2;
-	}
+    if (pressDuration > LONG_PRESS_TIME) {
+      Serial.println("FS1 long press is detected!");
+      isLongDetected = true;
+      //tunerMode = true;
+    }
+  }
 
-	// BUTTON SW3
-	bool stateFS3 = digitalRead(FS_3);
-	if (stateFS3 != mStateFS3) {
-		if (millis() - mPrevDebounceTime3 > debounceTime) {
-			mStateFS3 = stateFS3;
-			if (mStateFS3 == LOW) {
-				// FS3 OFF to ON
-				if (controlMode == HIGH) {
-					MIDI.sendControlChange(DELAY, 127, 1);
-				} else {
-					MIDI.sendControlChange(REVERB, 127, 1);
-				}
-			} else {
-				// FS3 ON to OFF
-				if (controlMode == HIGH) {
-					MIDI.sendControlChange(DELAY, 0, 1);
-				} else {
-					MIDI.sendControlChange(REVERB, 0, 1);
-				}
-			}
-		}
-	}
-	if (stateFS3 != mStateFS3Prev) {
-		mPrevDebounceTime3 = millis();
-		mStateFS3Prev = stateFS3;
-	}
+  // ### 2. BUTTON FS-2 ###
+  if (btnFS1.isPressed() && tunerMode == false) {
+    Serial.println("The FS_1 is pressed!");
+    if (mPrevStateFS1 == false) {
+      if (controlMode == true) {
+        MIDI.sendControlChange(OD_DS, 127, 1);
+      } else {
+        MIDI.sendControlChange(EQ, 127, 1);
+      }
+      mPrevStateFS1 = true;
+    } else {
+      if (controlMode == true) {
+        MIDI.sendControlChange(OD_DS, 0, 1);
+      } else {
+        MIDI.sendControlChange(EQ, 0, 1);
+      }
+      mPrevStateFS1 = false;
+    }
+  }
+
+  if (btnFS1.isReleased()) {
+    Serial.println("The FS_1 is released!");
+  }
+
+
+  // ### 3. BUTTON FS-3 / TUNER ###
+  if (btnFS2.isPressed() && tunerMode == false) {
+    Serial.println("The FS_2 is pressed!");
+    if (mPrevStateFS2 == false) {
+      if (controlMode == true) {
+        MIDI.sendControlChange(FXB, 127, 1);
+      } else {
+        MIDI.sendControlChange(FXA, 127, 1);
+      }
+      mPrevStateFS2 = true;
+    } else {
+      if (controlMode == true) {
+        MIDI.sendControlChange(FXB, 0, 1);
+      } else {
+        MIDI.sendControlChange(FXA, 0, 1);
+      }
+      mPrevStateFS2 = false;
+    }
+  }
+
+  if (btnFS2.isReleased()) {
+    Serial.println("The FS_2 is released!");
+  }
+  
+  if (tunerMode == true)
+    // tuner on
+    MIDI.sendControlChange(TUNER, 127, 1);
+    // FS_M LED neen to blink on
+  else
+    // tuner off
+    MIDI.sendControlChange(TUNER, 0, 1);
+    // FS_M LED need to blink
+
 }
