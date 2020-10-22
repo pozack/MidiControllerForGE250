@@ -1,5 +1,6 @@
 #include <MIDI.h>
 #include <ezButton.h>
+#include <BlynkSimpleSerialBLE.h>	// need to install Blynk library
 
 // ## GE250 MIDI IN CC REFERENCE ##
 // -------------------------------------------
@@ -20,7 +21,7 @@
 #define TUNER             22    // 0-127  *
 // -------------------------------------------
 
-// ## MIDI Controller Switch Settings
+// ## Midi controller switch settings
 #define FS_1 3		// OD/DS (Mode1), EQ (Mode2) on/off switch + mode selector by long press
 #define FS_2 4		// FXB (Mode1), FXA (Mode2) on/off switch
 #define FS_3 5		// Delay (Mode1), Reverb (Mode2) on/off switch + tuner by long press
@@ -34,12 +35,18 @@
 #else
 	#include <SoftwareSerial.h>
 	using Transport = MIDI_NAMESPACE::SerialMIDI<SoftwareSerial>;
-	int rxPin = 6;
-	int txPin = 7;
-	SoftwareSerial mySerial = SoftwareSerial(rxPin, txPin);
-	Transport serialMIDI(mySerial);
+	int rxMidi = 6;
+	int txMidi = 7;
+	SoftwareSerial midiSerial = SoftwareSerial(rxMidi, txMidi);
+	Transport serialMIDI(midiSerial);
 	MIDI_NAMESPACE::MidiInterface<Transport> MIDI((Transport&)serialMIDI);
 #endif
+
+// ## Blynk connection (w/ BT) settings
+char auth[] = "-xXlC2gJviLVVsETY6DQMv1UJHZ9tNsk";	// Auth Token in Blynk App
+int rxBlynk = 12;
+int txBlynk = 13;
+SoftwareSerial SwSerial(rxBlynk, txBlynk);
 
 ezButton btnFS1(FS_1);
 ezButton btnFS2(FS_2);
@@ -48,7 +55,7 @@ ezButton btnFS3(FS_3);
 const int SHORT_PRESS_TIME = 500;
 const int LONG_PRESS_TIME  = 500;
 
-// setting parameters for mode selector
+// ## Setting parameters for mode selector
 unsigned long pressedTimeFs1	= 0;
 unsigned long releasedTimeFs1	= 0;
 unsigned long pressedTimeFs3	= 0;
@@ -77,12 +84,17 @@ void setup() {
 	pinMode(LED_S3, OUTPUT);
 
 	MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
+
+	SerialBLE.begin(9600);
+	Blynk.begin(SerialBLE, auth);
 }
 
 void loop() {
 	btnFS1.loop();
 	btnFS2.loop();
 	btnFS3.loop();
+
+	Blynk.run();
 
 	// ### 1. BUTTON FS-1 / MODE SELECTOR ###
 	if (btnFS1.isPressed()) {
