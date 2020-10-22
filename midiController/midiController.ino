@@ -46,7 +46,8 @@
 char auth[] = "-xXlC2gJviLVVsETY6DQMv1UJHZ9tNsk";	// Auth Token in Blynk App
 int rxBT = 12;
 int txBT = 13;
-SoftwareSerial BTSerial(rxBT, txBT);
+SoftwareSerial BlynkSerial(rxBT, txBT);
+#define BLYNK_PRINT BlynkSerial;
 
 ezButton btnFS1(FS_1);
 ezButton btnFS2(FS_2);
@@ -85,9 +86,8 @@ void setup() {
 
 	MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
 
-	BTSerial.begin(9600);
-	//SerialBLE.begin(9600);
-	//Blynk.begin(SerialBLE, auth);
+	BlynkSerial.begin(9600);
+	Blynk.begin(BlynkSerial, auth);
 }
 
 void loop() {
