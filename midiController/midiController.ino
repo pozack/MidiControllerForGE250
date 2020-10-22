@@ -1,5 +1,6 @@
 #include <MIDI.h>
 #include <ezButton.h>
+#include <SoftwareSerial.h>
 #include <BlynkSimpleSerialBLE.h>	// need to install Blynk library
 
 // ## GE250 MIDI IN CC REFERENCE ##
@@ -33,7 +34,6 @@
 #if defined(ARDUINO_SAM_DUE) || defined(SAMD_SERIES)
 	MIDI_CREATE_DEFAULT_INSTANCE();
 #else
-	#include <SoftwareSerial.h>
 	using Transport = MIDI_NAMESPACE::SerialMIDI<SoftwareSerial>;
 	int rxMidi = 6;
 	int txMidi = 7;
@@ -44,9 +44,9 @@
 
 // ## Blynk connection (w/ BT) settings
 char auth[] = "-xXlC2gJviLVVsETY6DQMv1UJHZ9tNsk";	// Auth Token in Blynk App
-int rxBlynk = 12;
-int txBlynk = 13;
-SoftwareSerial SwSerial(rxBlynk, txBlynk);
+int rxBT = 12;
+int txBT = 13;
+SoftwareSerial BTSerial(rxBT, txBT);
 
 ezButton btnFS1(FS_1);
 ezButton btnFS2(FS_2);
@@ -85,8 +85,9 @@ void setup() {
 
 	MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
 
-	SerialBLE.begin(9600);
-	Blynk.begin(SerialBLE, auth);
+	BTSerial.begin(9600);
+	//SerialBLE.begin(9600);
+	//Blynk.begin(SerialBLE, auth);
 }
 
 void loop() {
@@ -94,7 +95,11 @@ void loop() {
 	btnFS2.loop();
 	btnFS3.loop();
 
-	Blynk.run();
+	//Blynk.run();
+	// ### 0. Serial Communication by BLE (CC & PC Command)
+	if (BTSerial.available()) {
+		char cmd = (char)BTSerial.read();
+	}
 
 	// ### 1. BUTTON FS-1 / MODE SELECTOR ###
 	if (btnFS1.isPressed()) {
