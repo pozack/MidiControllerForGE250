@@ -1,7 +1,7 @@
 #include <MIDI.h>
 #include <ezButton.h>
 #include <SoftwareSerial.h>
-#include <BlynkSimpleSerialBLE.h>	// need to install Blynk library
+#include <BlynkSimpleSerialBLE.h>
 
 // ## GE250 MIDI IN CC REFERENCE ##
 // -------------------------------------------
@@ -42,12 +42,12 @@
 	MIDI_NAMESPACE::MidiInterface<Transport> MIDI((Transport&)serialMIDI);
 #endif
 
-// ## Blynk connection (w/ BT) settings
-char auth[] = "-xXlC2gJviLVVsETY6DQMv1UJHZ9tNsk";	// Auth Token in Blynk App
+// Bluetooth connection (w/ HM-10 module) settings
 int rxBT = 12;
 int txBT = 13;
-SoftwareSerial BlynkSerial(rxBT, txBT);
-#define BLYNK_PRINT BlynkSerial;
+SoftwareSerial BTSerial(rxBT, txBT);
+char BTData;
+String BTCmd = "";
 
 ezButton btnFS1(FS_1);
 ezButton btnFS2(FS_2);
@@ -75,6 +75,8 @@ bool mPrevStateFS3    = false;
 
 void setup() {
 	Serial.begin(9600);
+	BTSerial.begin(9600);
+
 	btnFS1.setDebounceTime(50);
 	btnFS2.setDebounceTime(50);
 	btnFS3.setDebounceTime(50);
@@ -85,9 +87,6 @@ void setup() {
 	pinMode(LED_S3, OUTPUT);
 
 	MIDI.begin(MIDI_CHANNEL_OMNI); // channel MUST be 'OMNI'
-
-	BlynkSerial.begin(9600);
-	Blynk.begin(BlynkSerial, auth);
 }
 
 void loop() {
@@ -95,10 +94,11 @@ void loop() {
 	btnFS2.loop();
 	btnFS3.loop();
 
-	//Blynk.run();
-	// ### 0. Serial Communication by BLE (CC & PC Command)
-	if (BTSerial.available()) {
-		char cmd = (char)BTSerial.read();
+	// ### 0. Controller Setting by BT communication
+	if (mySerial.available()) {
+		BTData = BTSerial.read();
+		BTCmd = String(BTData);
+		Serial.write(BTData);
 	}
 
 	// ### 1. BUTTON FS-1 / MODE SELECTOR ###
