@@ -43,11 +43,11 @@
 #endif
 
 // Bluetooth connection (w/ HM-10 module) settings
+#define INPUT_SIZE 30
 int rxBT = 12;
 int txBT = 13;
 SoftwareSerial BTSerial(rxBT, txBT);
-char BTData;
-String BTCmd = "";
+char BTData[INPUT_SIZE + 1];
 
 ezButton btnFS1(FS_1);
 ezButton btnFS2(FS_2);
@@ -95,10 +95,32 @@ void loop() {
 	btnFS3.loop();
 
 	// ### 0. Controller Setting by BT communication
-	if (mySerial.available()) {
-		BTData = BTSerial.read();
-		BTCmd = String(BTData);
-		Serial.write(BTData);
+	// FS Number (Mode1 : 1 ~ 3, Mode2 : 4 ~ 6) : CC Value & ...
+	// e.g. '1:11(OD/DS)&2:18(FXB)&3:19(DELAY)', '4:16(EQ)&5:10(FXA)&6:20(REVERB)'
+	int key = 0;
+
+	while(BTSerial.available()) {
+		delay(3);
+		if (key < INPUT_SIZE && BTSerial.abailable()) {
+			BTData[key] = BTSerial.read();
+			key += 1;
+		}
+	}
+
+	if (key > 0) {
+		BTData[key] = 0;
+
+		char* command = strtok(input, "&");
+		while (command != 0) {
+			char* separator = strchr(command, ":");
+			if (separator != 0) {
+				*separator = 0;
+				int fsId = atoi(command);
+				++separator;
+				int fsCCVal = atoi(separator);
+			}
+			command = strtok(0, "&");
+		}
 	}
 
 	// ### 1. BUTTON FS-1 / MODE SELECTOR ###
